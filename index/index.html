@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IPL Fantasy Points Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --gold: #F5A623; --gold-dark: #C47F0A;
+    --blue: #1A2B5E; --blue-mid: #243680; --blue-light: #2E4CA8;
+    --red: #E63946; --green: #2DC653;
+    --bg: #0D1535; --surface: #131E45; --surface2: #1A2755;
+    --border: rgba(245,166,35,0.18); --text: #F0F4FF; --muted: #8899CC;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 80% 40% at 50% -10%, rgba(36,54,128,0.55) 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(245,166,35,0.04) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(245,166,35,0.04) 40px);
+  }
+  header { text-align: center; padding: 48px 20px 32px; }
+  .trophy { font-size: 48px; display: block; margin-bottom: 10px; animation: pulse 2.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+  h1 {
+    font-family: 'Bebas Neue', sans-serif; font-size: clamp(36px,7vw,72px); letter-spacing: 4px;
+    background: linear-gradient(135deg,#F5A623 0%,#FFD97D 50%,#F5A623 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    line-height: 1; margin-bottom: 6px;
+  }
+  .subtitle { font-size: 14px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; }
+
+  /* Import */
+  .import-section { max-width: 780px; margin: 0 auto 32px; padding: 0 16px; }
+  .import-card {
+    background: var(--surface); border: 1px solid rgba(46,76,168,0.6);
+    border-radius: 16px; padding: 20px 24px; position: relative; overflow: hidden;
+  }
+  .import-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #2E4CA8, #F5A623, #2E4CA8, transparent);
+  }
+  .import-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: var(--text);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .ai-badge {
+    font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 1px;
+    background: linear-gradient(135deg,#243680,#2E4CA8); border: 1px solid rgba(46,76,168,0.8);
+    color: #90AAFF; border-radius: 6px; padding: 2px 8px;
+  }
+  .import-desc { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+
+  /* Multi-image grid */
+  .img-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px; margin-bottom: 12px;
+  }
+  .img-thumb {
+    position: relative; border-radius: 8px; overflow: hidden;
+    border: 1px solid rgba(46,76,168,0.45); aspect-ratio: 9/16; background: var(--bg);
+  }
+  .img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .img-thumb .thumb-num {
+    position: absolute; top: 4px; left: 5px; background: rgba(0,0,0,0.65);
+    color: #fff; font-size: 10px; font-weight: 600; border-radius: 4px; padding: 1px 5px;
+  }
+  .img-thumb .thumb-del {
+    position: absolute; top: 4px; right: 4px; background: rgba(230,57,70,0.8); border: none; color: #fff;
+    border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.15s;
+  }
+  .img-thumb:hover .thumb-del { opacity: 1; }
+
+  .add-img-btn {
+    aspect-ratio: 9/16; border: 1.5px dashed rgba(46,76,168,0.55); border-radius: 8px;
+    background: transparent; color: var(--muted); cursor: pointer; font-size: 22px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    transition: border-color 0.2s, background 0.2s; position: relative;
+  }
+  .add-img-btn span { font-size: 11px; font-family: 'DM Sans', sans-serif; }
+  .add-img-btn:hover { border-color: var(--gold); background: rgba(245,166,35,0.04); color: var(--gold); }
+  .add-img-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .add-img-btn.drag-over { border-color: var(--gold); background: rgba(245,166,35,0.07); }
+
+  .import-controls { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .import-controls-left { flex: 1; min-width: 140px; }
+  .team-select-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .team-select {
+    background: var(--bg); border: 1px solid rgba(46,76,168,0.5); border-radius: 8px;
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px;
+    padding: 8px 10px; outline: none; transition: border-color 0.2s; width: 100%;
+  }
+  .team-select:focus { border-color: var(--gold); }
+
+  .parse-btn {
+    padding: 10px 14px; background: linear-gradient(135deg,#243680,#2E4CA8);
+    border: 1px solid rgba(46,76,168,0.8); border-radius: 10px; color: #fff;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s; display: flex; align-items: center; justify-content: center; gap: 7px;
+    white-space: nowrap;
+  }
+  .parse-btn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
+  .parse-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .parse-btn-both { background: linear-gradient(135deg,#0e2e14,#1a5c28); border-color: rgba(45,198,83,0.5); }
+  .spinner { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.25); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+  .parse-btn.loading .spinner { display: block; }
+  .parse-btn.loading .btn-text { opacity: 0.65; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  .import-status { font-size: 12px; padding: 9px 12px; border-radius: 8px; display: none; margin-top: 12px; line-height: 1.5; }
+  .import-status.success { background: rgba(45,198,83,0.1); border: 1px solid rgba(45,198,83,0.3); color: var(--green); display: block; }
+  .import-status.error   { background: rgba(230,57,70,0.1);  border: 1px solid rgba(230,57,70,0.3);  color: var(--red); display: block; }
+  .import-status.info    { background: rgba(46,76,168,0.15); border: 1px solid rgba(46,76,168,0.4);  color: #90AAFF; display: block; }
+
+  /* Points Guide */
+  .points-guide { max-width: 780px; margin: 0 auto 36px; padding: 0 16px; }
+  .guide-title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: var(--gold); text-align: center; margin-bottom: 14px; }
+  .guide-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+  @media(max-width:600px){ .guide-grid{grid-template-columns:repeat(2,1fr);} }
+  .guide-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; text-align: center; position: relative; overflow: hidden;
+  }
+  .guide-card::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; background:linear-gradient(90deg,transparent,var(--gold),transparent); }
+  .guide-icon { font-size: 22px; margin-bottom: 6px; }
+  .guide-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .guide-pts { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--gold); }
+  .guide-input-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; }
+  .guide-input-row label { font-size: 11px; color: var(--muted); }
+  .pts-input {
+    width: 58px; background: var(--bg); border: 1px solid rgba(245,166,35,0.3); border-radius: 6px;
+    color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 18px;
+    text-align: center; padding: 4px 6px; outline: none; transition: border-color 0.2s;
+  }
+  .pts-input:focus { border-color: var(--gold); }
+
+  /* Toggle */
+  .toggle-wrap { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:14px; }
+  .toggle-label { font-size:13px; color:var(--muted); letter-spacing:0.5px; transition:color 0.3s; }
+  .toggle-label.on { color:var(--green); font-weight:500; }
+  .toggle { position:relative; width:44px; height:24px; cursor:pointer; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-track { position:absolute; inset:0; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); border-radius:999px; transition:background 0.3s,border-color 0.3s; }
+  .toggle input:checked ~ .toggle-track { background:rgba(45,198,83,0.25); border-color:rgba(45,198,83,0.6); }
+  .toggle-thumb { position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:var(--muted); transition:transform 0.25s,background 0.25s; }
+  .toggle input:checked ~ .toggle-track .toggle-thumb { transform:translateX(20px); background:var(--green); }
+  .bonus-section { transition:opacity 0.3s; }
+  .bonus-section.disabled { opacity:0.35; pointer-events:none; }
+
+  /* Main Grid */
+  .main { max-width:1100px; margin:0 auto; padding:0 16px 60px; display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media(max-width:700px){ .main{grid-template-columns:1fr;} }
+
+  .team-card { background:var(--surface); border:1px solid var(--border); border-radius:20px; overflow:hidden; }
+  .team-header { padding:18px 22px 14px; background:linear-gradient(135deg,var(--blue-mid),var(--blue-light)); display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(255,255,255,0.08); }
+  .team-name-wrap { flex:1; }
+  .team-label { font-size:10px; color:rgba(255,255,255,0.55); letter-spacing:2px; text-transform:uppercase; margin-bottom:2px; }
+  .team-name-input { background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.25); color:#fff; font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:2px; width:100%; outline:none; padding:0 0 2px; transition:border-color 0.2s; }
+  .team-name-input:focus { border-bottom-color:var(--gold); }
+  .team-total-badge { background:rgba(0,0,0,0.3); border-radius:10px; padding:8px 14px; text-align:center; min-width:72px; }
+  .ttb-label { font-size:9px; color:rgba(255,255,255,0.5); letter-spacing:1px; text-transform:uppercase; }
+  .ttb-val { font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--gold); line-height:1.1; }
+
+  .player-table { width:100%; border-collapse:collapse; }
+  .player-table thead tr { background:var(--surface2); }
+  .player-table th { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); padding:10px 12px; text-align:center; font-weight:500; }
+  .player-table th:first-child { text-align:left; }
+  .player-table tbody tr { border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.15s; }
+  .player-table tbody tr:hover { background:rgba(255,255,255,0.03); }
+  .player-table tbody tr:last-child { border-bottom:none; }
+  .player-table td { padding:10px 12px; text-align:center; vertical-align:middle; }
+  .player-table td:first-child { text-align:left; }
+
+  .player-num { display:inline-flex; width:22px; height:22px; align-items:center; justify-content:center; background:var(--blue-light); border-radius:50%; font-size:11px; font-weight:600; margin-right:8px; flex-shrink:0; color:rgba(255,255,255,0.7); }
+  .player-name-input { background:transparent; border:none; border-bottom:1px solid transparent; color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; width:110px; outline:none; padding:2px 0; transition:border-color 0.2s; }
+  .player-name-input:focus { border-bottom-color:var(--gold); }
+  .stat-input { width:52px; background:var(--bg); border:1px solid rgba(255,255,255,0.08); border-radius:8px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; text-align:center; padding:5px 6px; outline:none; transition:border-color 0.2s,background 0.2s; }
+  .stat-input:focus { border-color:var(--gold); background:rgba(245,166,35,0.07); }
+  .player-pts { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--gold); min-width:36px; display:inline-block; }
+  .player-pts.bump { animation:bump 0.3s ease; }
+  @keyframes bump { 0%{transform:scale(1)} 50%{transform:scale(1.3);color:#FFD97D} 100%{transform:scale(1)} }
+
+  .remove-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; padding:4px 6px; border-radius:6px; transition:color 0.2s,background 0.2s; }
+  .remove-btn:hover { color:var(--red); background:rgba(230,57,70,0.12); }
+  .captain-btn { background:none; border:none; font-size:16px; padding:4px 6px; border-radius:6px; }
+  .captain-btn.active { color:var(--gold); background:rgba(245,166,35,0.15); }
+  .captain-badge { display:inline-block; font-size:10px; font-weight:600; background:rgba(245,166,35,0.2); color:var(--gold); border:1px solid rgba(245,166,35,0.4); border-radius:4px; padding:1px 5px; margin-left:4px; vertical-align:middle; }
+  .bonus-badge { display:inline-block; font-size:10px; font-weight:600; background:rgba(45,198,83,0.15); color:var(--green); border:1px solid rgba(45,198,83,0.35); border-radius:4px; padding:1px 5px; margin-left:4px; vertical-align:middle; animation:fadeIn 0.3s ease; }
+  .ai-fill-badge { display:inline-block; font-size:10px; font-weight:600; background:rgba(46,76,168,0.3); color:#90AAFF; border:1px solid rgba(46,76,168,0.5); border-radius:4px; padding:1px 6px; margin-left:4px; vertical-align:middle; }
+  @keyframes fadeIn { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
+  tr.is-captain { background:rgba(245,166,35,0.05) !important; }
+  tr.is-captain td:first-child { border-left:2px solid var(--gold); }
+
+  .add-player-btn { width:100%; padding:13px; background:transparent; border:1px dashed rgba(245,166,35,0.3); color:var(--gold); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; transition:background 0.2s,border-color 0.2s; border-radius:0 0 20px 20px; }
+  .add-player-btn:hover { background:rgba(245,166,35,0.07); border-color:var(--gold); }
+
+  /* Scoreboard */
+  .scoreboard { max-width:1100px; margin:0 auto 32px; padding:0 16px; }
+  .score-wrap { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:24px 28px; display:flex; align-items:center; justify-content:space-around; gap:20px; flex-wrap:wrap; position:relative; overflow:hidden; }
+  .score-wrap::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(36,54,128,0.2) 0%,transparent 60%); pointer-events:none; }
+  .score-team { text-align:center; min-width:160px; }
+  .score-name { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:rgba(255,255,255,0.8); margin-bottom:6px; }
+  .score-val { font-family:'Bebas Neue',sans-serif; font-size:64px; line-height:1; color:var(--gold); transition:color 0.4s; }
+  .score-val.leader { color:var(--green); }
+  .score-val.trailer { color:var(--muted); }
+  .vs-divider { font-family:'Bebas Neue',sans-serif; font-size:32px; color:var(--muted); letter-spacing:3px; }
+  .winner-banner { text-align:center; margin-top:16px; }
+  .winner-label { display:inline-block; padding:8px 24px; border-radius:999px; font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px; background:linear-gradient(135deg,var(--gold-dark),var(--gold)); color:#000; opacity:0; transform:translateY(6px); transition:opacity 0.4s,transform 0.4s; }
+  .winner-label.show { opacity:1; transform:translateY(0); }
+
+  .controls { text-align:center; margin:0 auto 20px; }
+  .reset-btn { background:transparent; border:1px solid rgba(255,255,255,0.15); color:var(--muted); font-family:'DM Sans',sans-serif; font-size:13px; padding:9px 22px; border-radius:8px; cursor:pointer; transition:all 0.2s; }
+  .reset-btn:hover { border-color:var(--red); color:var(--red); background:rgba(230,57,70,0.07); }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="trophy">🏆</span>
+  <h1>IPL Points Calculator</h1>
+  <p class="subtitle">Fantasy Cricket Scoring System</p>
+</header>
+
+<!-- Scorecard Import -->
+<div class="import-section">
+  <div class="import-card">
+    <div class="import-title">📸 Import Scorecard <span class="ai-badge">AI-POWERED</span></div>
+    <p class="import-desc">Upload multiple Cricbuzz scorecard screenshots (scroll down to capture the full scorecard). Claude reads all images together and auto-fills the stats — including run-outs.</p>
+
+    <!-- Image grid -->
+    <div class="img-grid" id="img-grid">
+      <button class="add-img-btn" id="add-img-btn" title="Add screenshot">
+        <input type="file" id="scorecard-file" accept="image/*" multiple onchange="onFilesSelect(event)" />
+        📷
+        <span>Add screenshot</span>
+      </button>
+    </div>
+
+    <!-- Controls row -->
+    <div class="import-controls">
+      <div class="import-controls-left">
+        <div class="team-select-label">Import into</div>
+        <select class="team-select" id="import-team">
+          <option value="1">Team 1</option>
+          <option value="2">Team 2</option>
+        </select>
+      </div>
+      <button class="parse-btn" id="parse-btn" onclick="parseScorecard()" disabled>
+        <div class="spinner"></div>
+        <span class="btn-text">✨ Extract One Team</span>
+      </button>
+      <button class="parse-btn parse-btn-both" id="parse-both-btn" onclick="parseScorecardBoth()" disabled>
+        <div class="spinner"></div>
+        <span class="btn-text">⚡ Extract Both Teams</span>
+      </button>
+      <button class="parse-btn" id="clear-btn" onclick="clearAllFiles()" disabled style="background:transparent;border-color:rgba(230,57,70,0.4);color:var(--red);">
+        <span class="btn-text">✕ Clear</span>
+      </button>
+    </div>
+    <div class="import-status" id="import-status"></div>
+  </div>
+</div>
+
+<!-- Points Guide -->
+<div class="points-guide">
+  <div class="guide-title">⚡ Points System</div>
+  <div class="guide-grid">
+    <div class="guide-card">
+      <div class="guide-icon">🏏</div>
+      <div class="guide-label">Per Run</div>
+      <div class="guide-pts" id="display-run-pts">1</div>
+      <div class="guide-input-row"><label>pts/run</label><input class="pts-input" type="number" id="run-pts" value="1" min="0" step="0.5" /></div>
+    </div>
+    <div class="guide-card">
+      <div class="guide-icon">🤲</div>
+      <div class="guide-label">Per Catch</div>
+      <div class="guide-pts" id="display-catch-pts">10</div>
+      <div class="guide-input-row"><label>pts/catch</label><input class="pts-input" type="number" id="catch-pts" value="10" min="0" step="1" /></div>
+    </div>
+    <div class="guide-card">
+      <div class="guide-icon">🎯</div>
+      <div class="guide-label">Per Wicket</div>
+      <div class="guide-pts" id="display-wicket-pts">20</div>
+      <div class="guide-input-row"><label>pts/wicket</label><input class="pts-input" type="number" id="wicket-pts" value="20" min="0" step="1" /></div>
+    </div>
+    <div class="guide-card" style="border-color:rgba(245,166,35,0.45);">
+      <div class="guide-icon">👑</div>
+      <div class="guide-label">Captain Bonus</div>
+      <div class="guide-pts">2×</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">Points doubled<br>one per team</div>
+    </div>
+  </div>
+  <div class="toggle-wrap">
+    <span class="toggle-label" id="bonus-toggle-label">Milestone Bonus</span>
+    <label class="toggle">
+      <input type="checkbox" id="bonus-toggle" checked onchange="toggleBonus(this.checked)" />
+      <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    </label>
+    <span class="toggle-label on" id="bonus-toggle-state">ON</span>
+  </div>
+  <div class="bonus-section" id="bonus-section" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+    <div class="guide-card" style="border-color:rgba(45,198,83,0.4);">
+      <div class="guide-icon">🏏</div>
+      <div class="guide-label">50+ Runs Bonus</div>
+      <div class="guide-pts" style="color:#2DC653;" id="display-bonus-pts">25</div>
+      <div class="guide-input-row"><label>bonus pts</label><input class="pts-input" type="number" id="bonus-pts" value="25" min="0" step="5" style="border-color:rgba(45,198,83,0.4);color:#2DC653;" /></div>
+    </div>
+    <div class="guide-card" style="border-color:rgba(45,198,83,0.4);">
+      <div class="guide-icon">🎯</div>
+      <div class="guide-label">3-Wicket Bonus</div>
+      <div class="guide-pts" style="color:#2DC653;" id="display-bonus-pts-wkt">25</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">Same as 50+ runs<br>auto-applied</div>
+    </div>
+  </div>
+</div>
+
+<!-- Scoreboard -->
+<div class="scoreboard">
+  <div class="score-wrap">
+    <div class="score-team">
+      <div class="score-name" id="sb-t1-name">TEAM 1</div>
+      <div class="score-val" id="sb-t1-val">0</div>
+    </div>
+    <div>
+      <div class="vs-divider">VS</div>
+      <div class="winner-banner"><span class="winner-label" id="winner-label">🏆 TEAM 1 WINS!</span></div>
+    </div>
+    <div class="score-team">
+      <div class="score-name" id="sb-t2-name">TEAM 2</div>
+      <div class="score-val" id="sb-t2-val">0</div>
+    </div>
+  </div>
+</div>
+
+<!-- Teams -->
+<div class="main">
+  <div class="team-card">
+    <div class="team-header">
+      <div class="team-name-wrap">
+        <div class="team-label">Team 1</div>
+        <input class="team-name-input" type="text" id="t1-name" value="Team 1" maxlength="20" />
+      </div>
+      <div class="team-total-badge"><div class="ttb-label">Total Pts</div><div class="ttb-val" id="t1-total">0</div></div>
+    </div>
+    <table class="player-table">
+      <thead><tr><th>Player</th><th>Runs</th><th>Catch</th><th>Wkts</th><th>Pts</th><th></th><th></th></tr></thead>
+      <tbody id="t1-body"></tbody>
+    </table>
+    <button class="add-player-btn" onclick="addPlayer(1)">+ Add Player</button>
+  </div>
+  <div class="team-card">
+    <div class="team-header">
+      <div class="team-name-wrap">
+        <div class="team-label">Team 2</div>
+        <input class="team-name-input" type="text" id="t2-name" value="Team 2" maxlength="20" />
+      </div>
+      <div class="team-total-badge"><div class="ttb-label">Total Pts</div><div class="ttb-val" id="t2-total">0</div></div>
+    </div>
+    <table class="player-table">
+      <thead><tr><th>Player</th><th>Runs</th><th>Catch</th><th>Wkts</th><th>Pts</th><th></th><th></th></tr></thead>
+      <tbody id="t2-body"></tbody>
+    </table>
+    <button class="add-player-btn" onclick="addPlayer(2)">+ Add Player</button>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="reset-btn" onclick="resetAll()">↺ Reset All Data</button>
+</div>
+
+<script>
+const initialData = {
+  team1: { name:"Team 1", players:[
+    {name:"Player 1",runs:0,catch:0,wickets:0},{name:"Player 2",runs:0,catch:0,wickets:0},
+    {name:"Player 3",runs:0,catch:0,wickets:0},{name:"Player 4",runs:0,catch:0,wickets:0},
+    {name:"Player 5",runs:0,catch:0,wickets:0},{name:"Player 6",runs:0,catch:0,wickets:0}
+  ]},
+  team2: { name:"Team 2", players:[
+    {name:"Player 1",runs:0,catch:0,wickets:0},{name:"Player 2",runs:0,catch:0,wickets:0},
+    {name:"Player 3",runs:0,catch:0,wickets:0},{name:"Player 4",runs:0,catch:0,wickets:0},
+    {name:"Player 5",runs:0,catch:0,wickets:0},{name:"Player 6",runs:0,catch:0,wickets:0}
+  ]}
+};
+
+let ptsRun=1, ptsCatch=10, ptsWicket=20, ptsBonus=25, bonusEnabled=true;
+let uploadedImages = []; // array of {base64, dataUrl, name}
+let state = JSON.parse(JSON.stringify(initialData));
+
+// ── Multi-image Upload ──
+function onFilesSelect(e) {
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      uploadedImages.push({ base64: ev.target.result.split(',')[1], dataUrl: ev.target.result, name: file.name });
+      renderThumbs();
+      updateParseButtons();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = ''; // allow re-selecting same file
+}
+
+function removeImage(idx) {
+  uploadedImages.splice(idx, 1);
+  renderThumbs();
+  updateParseButtons();
+}
+
+function clearAllFiles() {
+  uploadedImages = [];
+  renderThumbs();
+  updateParseButtons();
+  setStatus('','');
+}
+
+function renderThumbs() {
+  const grid = document.getElementById('img-grid');
+  // Remove existing thumbs (keep the add button)
+  Array.from(grid.querySelectorAll('.img-thumb')).forEach(el => el.remove());
+  // Insert thumbs before add button
+  const addBtn = document.getElementById('add-img-btn');
+  uploadedImages.forEach((img, i) => {
+    const div = document.createElement('div');
+    div.className = 'img-thumb';
+    div.innerHTML = `
+      <img src="${img.dataUrl}" alt="screenshot ${i+1}" />
+      <span class="thumb-num">${i+1}</span>
+      <button class="thumb-del" onclick="removeImage(${i})" title="Remove">✕</button>
+    `;
+    grid.insertBefore(div, addBtn);
+  });
+}
+
+function updateParseButtons() {
+  const has = uploadedImages.length > 0;
+  document.getElementById('parse-btn').disabled = !has;
+  document.getElementById('parse-both-btn').disabled = !has;
+  document.getElementById('clear-btn').disabled = !has;
+}
+
+// drag-drop on the add button
+const addBtn = document.getElementById('add-img-btn');
+addBtn.addEventListener('dragover', e => { e.preventDefault(); addBtn.classList.add('drag-over'); });
+addBtn.addEventListener('dragleave', () => addBtn.classList.remove('drag-over'));
+addBtn.addEventListener('drop', e => {
+  e.preventDefault(); addBtn.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  files.forEach(f => {
+    const r = new FileReader();
+    r.onload = ev => { uploadedImages.push({ base64: ev.target.result.split(',')[1], dataUrl: ev.target.result, name: f.name }); renderThumbs(); updateParseButtons(); };
+    r.readAsDataURL(f);
+  });
+});
+
+function setStatus(msg, type) {
+  const el = document.getElementById('import-status');
+  el.textContent = msg;
+  el.className = 'import-status' + (type ? ' '+type : '');
+}
+
+function setLoading(id, on) {
+  const btn = document.getElementById(id);
+  btn.disabled = on;
+  btn.classList.toggle('loading', on);
+}
+
+// ── Claude API — sends ALL images ──
+async function callClaude(prompt) {
+  const content = [];
+  uploadedImages.forEach((img, i) => {
+    content.push({ type:'text', text: uploadedImages.length > 1 ? `Screenshot ${i+1} of ${uploadedImages.length}:` : 'Scorecard screenshot:' });
+    content.push({ type:'image', source:{ type:'base64', media_type:'image/jpeg', data: img.base64 } });
+  });
+  content.push({ type:'text', text: prompt });
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      model:"claude-sonnet-4-20250514",
+      max_tokens:1500,
+      messages:[{ role:"user", content }]
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content.map(b=>b.text||'').join('');
+}
+
+const PROMPT_RULES = `
+FIELDING RULES (read carefully):
+- catches: count each time this player's name appears after "c " in a dismissal line like "c PlayerName b Bowler". Each such appearance = 1 catch.
+- run-outs count as wickets for the responsible fielder:
+  * "run out (FielderName)" → FielderName gets 1 wicket
+  * "run out (Fielder1/Fielder2)" → Fielder1 (the first name) gets 1 wicket
+- wickets: sum of bowling wickets + run-out wickets attributed to this player
+- runs: total runs scored while batting (0 if did not bat)
+- Merge batting, bowling, and fielding stats for the same player by name across all screenshots
+- Include every player who batted, bowled, took a catch, or was involved in a run-out
+- Return ONLY valid JSON, no explanation, no markdown, no backticks`;
+
+// ── Parse One Team ──
+async function parseScorecard() {
+  if (!uploadedImages.length) return;
+  const teamNum = parseInt(document.getElementById('import-team').value);
+  setLoading('parse-btn', true);
+  const n = uploadedImages.length;
+  setStatus(`Reading ${n} screenshot${n>1?'s':''} with AI…`, 'info');
+
+  const prompt = `These are ${n} screenshot${n>1?'s':''} of a Cricbuzz cricket scorecard (scroll sections of the same innings). Extract player stats for ONE team/innings shown.
+
+Return ONLY valid JSON:
+{
+  "teamName": "team name",
+  "players": [
+    { "name": "Player Name", "runs": 0, "catches": 0, "wickets": 0 }
+  ]
+}
+${PROMPT_RULES}`;
+
+  try {
+    const raw = await callClaude(prompt);
+    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    applyData(teamNum, parsed);
+    setStatus(`✓ ${parsed.players.length} players imported for ${parsed.teamName}. Run-outs included. Review and adjust if needed.`, 'success');
+  } catch(err) {
+    setStatus('Could not read scorecard. Try uploading clearer screenshots covering the full scorecard.', 'error');
+    console.error(err);
+  } finally {
+    setLoading('parse-btn', false);
+    updateParseButtons();
+  }
+}
+
+// ── Parse Both Teams ──
+async function parseScorecardBoth() {
+  if (!uploadedImages.length) return;
+  setLoading('parse-both-btn', true);
+  const n = uploadedImages.length;
+  setStatus(`Reading ${n} screenshot${n>1?'s':''} for both teams with AI…`, 'info');
+
+  const prompt = `These are ${n} screenshot${n>1?'s':''} of a Cricbuzz cricket scorecard (scroll sections of the same match). Extract player stats for BOTH teams.
+
+Return ONLY valid JSON:
+{
+  "team1": {
+    "teamName": "first team name",
+    "players": [ { "name": "Player Name", "runs": 0, "catches": 0, "wickets": 0 } ]
+  },
+  "team2": {
+    "teamName": "second team name",
+    "players": [ { "name": "Player Name", "runs": 0, "catches": 0, "wickets": 0 } ]
+  }
+}
+${PROMPT_RULES}`;
+
+  try {
+    const raw = await callClaude(prompt);
+    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    applyData(1, parsed.team1);
+    applyData(2, parsed.team2);
+    setStatus(`✓ Both teams imported — ${parsed.team1.teamName} & ${parsed.team2.teamName}. Run-outs included. Review if needed.`, 'success');
+  } catch(err) {
+    setStatus('Could not read both teams. Make sure your screenshots cover the full scorecard.', 'error');
+    console.error(err);
+  } finally {
+    setLoading('parse-both-btn', false);
+    updateParseButtons();
+  }
+}
+
+function applyData(teamNum, parsed) {
+  const data = teamNum===1 ? state.team1 : state.team2;
+  if (parsed.teamName) {
+    data.name = parsed.teamName;
+    document.getElementById(`t${teamNum}-name`).value = parsed.teamName;
+  }
+  if (parsed.players && parsed.players.length) {
+    data.players = parsed.players.map(p => ({
+      name: p.name||'Unknown', runs:parseInt(p.runs)||0,
+      catch:parseInt(p.catches)||0, wickets:parseInt(p.wickets)||0, fromAI:true
+    }));
+  }
+  renderPlayers(teamNum, data.players);
+  recalcTeam(teamNum);
+}
+
+// ── Points ──
+function toggleBonus(enabled) {
+  bonusEnabled = enabled;
+  document.getElementById('bonus-toggle-state').textContent = enabled?'ON':'OFF';
+  document.getElementById('bonus-toggle-state').className = enabled?'toggle-label on':'toggle-label';
+  document.getElementById('bonus-section').classList.toggle('disabled',!enabled);
+  recalcAll();
+}
+
+function getPoints(runs, catches, wickets, isCap) {
+  const r=parseFloat(runs)||0, c=parseFloat(catches)||0, w=parseFloat(wickets)||0;
+  const bonus = bonusEnabled ? ((r>=50?ptsBonus:0)+(w>=3?ptsBonus:0)) : 0;
+  const base = r*ptsRun + c*ptsCatch + w*ptsWicket + bonus;
+  return isCap ? base*2 : base;
+}
+
+function renderPlayers(team, players) {
+  const tbody = document.getElementById(`t${team}-body`);
+  tbody.innerHTML='';
+  players.forEach((p,i) => {
+    const isCap = i===0;
+    const r=parseFloat(p.runs)||0, w=parseFloat(p.wickets)||0;
+    const pts = getPoints(p.runs,p.catch,p.wickets,isCap);
+    const bonusBadges = bonusEnabled
+      ? ((r>=50?'<span class="bonus-badge">🏏 50+ bonus</span>':'')+(w>=3?'<span class="bonus-badge">🎯 3-wkt bonus</span>':''))
+      : '';
+    const aiBadge = p.fromAI ? '<span class="ai-fill-badge">AI</span>' : '';
+    const tr = document.createElement('tr');
+    if (isCap) tr.classList.add('is-captain');
+    tr.innerHTML=`
+      <td>
+        <span class="player-num">${isCap?'👑':i+1}</span>
+        <input class="player-name-input" type="text" value="${p.name}" maxlength="18"
+          oninput="updatePlayer(${team},${i},'name',this.value)" />
+        ${isCap?'<span class="captain-badge">C</span>':''}${aiBadge}${bonusBadges}
+      </td>
+      <td><input class="stat-input" type="number" value="${p.runs||''}" placeholder="0" min="0" oninput="updatePlayer(${team},${i},'runs',this.value)" /></td>
+      <td><input class="stat-input" type="number" value="${p.catch||''}" placeholder="0" min="0" oninput="updatePlayer(${team},${i},'catch',this.value)" /></td>
+      <td><input class="stat-input" type="number" value="${p.wickets||''}" placeholder="0" min="0" oninput="updatePlayer(${team},${i},'wickets',this.value)" /></td>
+      <td><span class="player-pts" id="pts-t${team}-${i}">${pts}</span></td>
+      <td>${isCap?'<span class="captain-btn active">👑</span>':''}</td>
+      <td><button class="remove-btn" onclick="removePlayer(${team},${i})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updatePlayer(team,idx,field,val) {
+  const data = team===1?state.team1:state.team2;
+  data.players[idx][field] = field==='name'?val:(parseFloat(val)||0);
+  recalcTeam(team);
+}
+
+function recalcTeam(team) {
+  const data = team===1?state.team1:state.team2;
+  let total=0;
+  data.players.forEach((p,i) => {
+    const pts = getPoints(p.runs,p.catch,p.wickets,i===0);
+    total+=pts;
+    const el=document.getElementById(`pts-t${team}-${i}`);
+    if(el && el.textContent!=pts){ el.textContent=pts; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  });
+  document.getElementById(`t${team}-total`).textContent=total;
+  updateScoreboard();
+}
+
+function recalcAll() { renderPlayers(1,state.team1.players); renderPlayers(2,state.team2.players); recalcTeam(1); recalcTeam(2); }
+
+function updateScoreboard() {
+  const t1=parseInt(document.getElementById('t1-total').textContent)||0;
+  const t2=parseInt(document.getElementById('t2-total').textContent)||0;
+  const n1=state.team1.name, n2=state.team2.name;
+  document.getElementById('sb-t1-name').textContent=n1.toUpperCase();
+  document.getElementById('sb-t2-name').textContent=n2.toUpperCase();
+  document.getElementById('sb-t1-val').textContent=t1;
+  document.getElementById('sb-t2-val').textContent=t2;
+  const v1=document.getElementById('sb-t1-val'), v2=document.getElementById('sb-t2-val'), wl=document.getElementById('winner-label');
+  v1.className='score-val'; v2.className='score-val';
+  if(t1>t2){v1.classList.add('leader');v2.classList.add('trailer');wl.textContent=`🏆 ${n1} WINS!`;wl.classList.add('show');}
+  else if(t2>t1){v2.classList.add('leader');v1.classList.add('trailer');wl.textContent=`🏆 ${n2} WINS!`;wl.classList.add('show');}
+  else{wl.textContent="🤝 IT'S A TIE!";if(t1>0)wl.classList.add('show');else wl.classList.remove('show');}
+}
+
+function addPlayer(team) {
+  const data=team===1?state.team1:state.team2;
+  data.players.push({name:`Player ${data.players.length+1}`,runs:0,catch:0,wickets:0});
+  renderPlayers(team,data.players); recalcTeam(team);
+}
+
+function removePlayer(team,idx) {
+  const data=team===1?state.team1:state.team2;
+  if(data.players.length<=1||idx===0) return;
+  data.players.splice(idx,1); renderPlayers(team,data.players); recalcTeam(team);
+}
+
+function resetAll() {
+  if(!confirm('Reset all data? All stats will be cleared to zero.')) return;
+  state=JSON.parse(JSON.stringify(initialData));
+  document.getElementById('t1-name').value=state.team1.name;
+  document.getElementById('t2-name').value=state.team2.name;
+  clearAllFiles(); recalcAll();
+}
+
+document.getElementById('run-pts').addEventListener('input',function(){ptsRun=parseFloat(this.value)||0;document.getElementById('display-run-pts').textContent=ptsRun;recalcAll();});
+document.getElementById('catch-pts').addEventListener('input',function(){ptsCatch=parseFloat(this.value)||0;document.getElementById('display-catch-pts').textContent=ptsCatch;recalcAll();});
+document.getElementById('wicket-pts').addEventListener('input',function(){ptsWicket=parseFloat(this.value)||0;document.getElementById('display-wicket-pts').textContent=ptsWicket;recalcAll();});
+document.getElementById('bonus-pts').addEventListener('input',function(){ptsBonus=parseFloat(this.value)||0;document.getElementById('display-bonus-pts').textContent=ptsBonus;document.getElementById('display-bonus-pts-wkt').textContent=ptsBonus;recalcAll();});
+document.getElementById('t1-name').addEventListener('input',function(){state.team1.name=this.value||'Team 1';updateScoreboard();});
+document.getElementById('t2-name').addEventListener('input',function(){state.team2.name=this.value||'Team 2';updateScoreboard();});
+
+recalcAll();
+</script>
+</body>
+</html>
